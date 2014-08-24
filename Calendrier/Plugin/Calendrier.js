@@ -49,31 +49,17 @@
         this.mois = this.toDay.getMonth();
         this.annee = this.toDay.getFullYear();
 
-        if (this.options.tobootstrap) this.toBootstrap();
+        this.toBootstrap();
 
-        if (this.options.src && this.options.srcType) {
-            $.ajax({
-                url: this.options.src,
-                dataType: this.options.srcType,
-                success: function (data) {
-                    self.events = data.reponse;
-                },
-                error: function (error) {
-                    console.log(error)
-                },
-                always: function () {
-                    console.log("always")
-                }
-            });
-        } else if (this.options.events) {
-            this.events = this.options.events;
-        }
+        this.loadEvents(function () {
+            self.generate();
+        });
 
-        this.generate();
     }
 
     Calendrier.DEFAULTS = {
-        "tobootstrap": false,
+        "src": "data/json/reservations.json", // data
+        "srcType": "json", // dataType,
         "date": new Date(),
         "mois": ["Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin", "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre"],
         "jours": ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"],
@@ -133,8 +119,8 @@
         "jour": $("<div class='cell jour'>"),
         "event": $("<div class='cell event'>"),
         "invalide": $("<div class='cell invalide'>"),
-        "precedent": $("<div class='precedent'></div>"),
-        "suivant": $("<div class='suivant'></div>"),
+        "precedent": $("<div class='precedent'><i class='glyphicon glyphicon-chevron-left'></div>"),
+        "suivant": $("<div class='suivant'><i class='glyphicon glyphicon-chevron-right'></div>"),
         "cell": $("<td>")
     };
 
@@ -225,14 +211,6 @@
         $date.append($mois)
             .append($annee);
 
-        if (this.options.tobootstrap) {
-            $precedent.append("<i class='glyphicon glyphicon-chevron-left'>");
-            $suivant.append("<i class='glyphicon glyphicon-chevron-right'>");
-        } else {
-            $precedent.append("<span>precedent</span>");
-            $suivant.append("<span>suivant</span>");
-        }
-
         return $header
             .prepend($precedent)
             .append($date)
@@ -275,7 +253,13 @@
         if (event && event.length > 0) {
             event = event[0];
             jour = $event.clone();
-            jour.data("event", event);
+            jour.popover({
+                'title': event.titre,
+                'content': event.description,
+                'html': true,
+                'container': 'body',
+                'trigger': 'manual'
+            });
         } else if (isValid) {
             jour = $jour.clone();
         } else {
@@ -373,6 +357,33 @@
         this.$element.html(calendar);
 
         this.bindEvents();
+    }
+
+    Calendrier.prototype.loadEvents = function (url, callback) {
+
+        if (typeof url == 'function') {
+            callback = url;
+            url = "";
+        }
+
+        var self = this,
+            provider = url || this.options.src,
+            type = this.options.srcType;
+
+        $.ajax({
+            url: provider,
+            dataType: type,
+            success: function (data) {
+                self.events = data.reponse;
+                if (callback) callback(data.reponse);
+            },
+            error: function (error) {
+                console.log(error)
+            },
+            always: function () {
+                console.log("always")
+            }
+        });
     }
 
     $.fn.calendrier = function (option) {

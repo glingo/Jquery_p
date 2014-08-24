@@ -1,0 +1,23 @@
+{
+    "reponse": [{
+        "titre": "reservation",
+        "description": "La salle est reservée",
+        "date": "24/08/2014"
+    }, {
+        "titre": "reservation",
+        "description": "La salle est reservée",
+        "date": "22/08/2014"
+    }, {
+        "titre": "reservation",
+        "description": "La salle est reservée",
+        "date": "20/08/2014"
+    }, {
+        "titre": "reservation",
+        "description": "La salle est reservée",
+        "date": "26/08/2014"
+    }, {
+        "titre": "reservation",
+        "description": "La salle est reservée",
+        "date": "21/08/2014"
+    }]
+}
