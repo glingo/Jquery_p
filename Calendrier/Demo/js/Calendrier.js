@@ -92,29 +92,25 @@
         "precedent": {
             "click": function (me, event, calendrier) {
                 console.log("click precedent");
-                var precedent = calendrier.options.date.getMonth() - 1;
-                calendrier.options.date.setMonth(precedent);
-                calendrier.generate();
+                calendrier.$element.trigger("calendrier.click.precedent");
             }
         },
         "suivant": {
             "click": function (me, event, calendrier) {
                 console.log("click suivant");
-                var precedent = calendrier.options.date.getMonth() + 1;
-                calendrier.options.date.setMonth(precedent);
-                calendrier.generate();
+                calendrier.$element.trigger("calendrier.click.suivant");
             }
         },
         "event": {
             "click": function (me, event, calendrier) {
                 console.log("click event");
-                $(me).popover('toggle');
+                calendrier.$element.trigger("calendrier.click.event", $(me).data("event"));
             }
         },
         "jour": {
             "click": function (me, event, calendrier) {
                 console.log("click jour");
-                $('.ondayclick').modal('toggle');
+                calendrier.$element.trigger("calendrier.click.jour");
             }
         }
     }
@@ -138,7 +134,6 @@
         "cell": $("<td>")
     };
 
-
     Calendrier.prototype.boostrapClasses = {
         "calendrier": "table table-striped",
         "header": "",
@@ -155,6 +150,24 @@
         "invalide": "",
         "precedent": "col-md-1 pull-left",
         "suivant": "col-md-1 pull-right"
+    }
+
+    Calendrier.prototype.cssClasses = {
+        "calendrier": "",
+        "header": "",
+        "body": "",
+        "footer": "",
+        "semainier": "",
+        "libellejour": "",
+        "ligne": "",
+        "date": "",
+        "annee": "",
+        "mois": "",
+        "jour": "",
+        "event": "",
+        "invalide": "",
+        "precedent": "",
+        "suivant": ""
     }
 
     Calendrier.prototype.utils = {
@@ -200,10 +213,36 @@
                 }));
             });
         });
+
+        this.$element.on("calendrier.click.precedent", function (e) {
+            console.log("calendrier.click.precedent");
+            var precedent = self.options.date.getMonth() - 1;
+            self.options.date.setMonth(precedent);
+            self.generate();
+        });
+
+        this.$element.on("calendrier.click.suivant", function (e) {
+            console.log("calendrier.click.suivant");
+            var precedent = self.options.date.getMonth() - 1;
+            self.options.date.setMonth(precedent);
+            self.generate();
+        });
+
+        this.$element.on("calendrier.click.event", function (e, data) {
+            console.log("calendrier.click.event", data);
+
+        });
+
+        this.$element.on("calendrier.click.jour", function (e) {
+            console.log("calendrier.click.jour");
+
+        });
     }
 
-    Calendrier.prototype.toBootstrap = function (calendrier) {
-        var elements = this.elements;
+    Calendrier.prototype.applyCss = function () {
+        var elements = this.elements,
+            isBootstrap = this.options.tobootstrap;
+
         $.each(this.boostrapClasses, function (i, o) {
             elements[i].addClass(o);
         });
@@ -385,5 +424,12 @@
     }
 
     $.fn.calendrier.Constructor = Calendrier;
+
+    $(window).on('load', function () {
+        $('[data-ride="calendrier"]').each(function () {
+            var $calendrier = $(this)
+            $calendrier.calendrier($calendrier.data())
+        })
+    })
 
 })(jQuery);
