@@ -1,21 +1,21 @@
-(function ($) {
+(function($) {
 
 
     "use strict";
 
-    Date.prototype.getWeek = function () {
+    Date.prototype.getWeek = function() {
         var onejan = new Date(this.getFullYear(), 0, 1);
         return Math.ceil((((this.getTime() - onejan.getTime()) / 86400000) + onejan.getDay() + 1) / 7);
     };
-    Date.prototype.getMonthFormatted = function () {
+    Date.prototype.getMonthFormatted = function() {
         var month = this.getMonth() + 1;
         return month < 10 ? '0' + month : month;
     };
-    Date.prototype.getDateFormatted = function () {
+    Date.prototype.getDateFormatted = function() {
         var date = this.getDate();
         return date < 10 ? '0' + date : date;
     };
-    Date.prototype.getFullDateFormatted = function () {
+    Date.prototype.getFullDateFormatted = function() {
         var tab = [
             this.getDateFormatted(),
             this.getMonthFormatted(),
@@ -24,11 +24,11 @@
         return tab.join('/');
     };
 
-    Date.prototype.compareToFrString = function (string) {
+    Date.prototype.compareToFrString = function(string) {
         return (this.getFullDateFormatted() == string);
     };
 
-    Date.prototype.fromFrString = function (string) {
+    Date.prototype.fromFrString = function(string) {
         if (typeof string == 'string' && string.split("/")) {
             var tab = string.split("/");
             this.setDate(Number(tab[0]));
@@ -38,35 +38,50 @@
         return this;
     };
 
-    var Calendrier = function (element, options) {
-        console.log("Nouveau clendrier", element, options);
+    var Calendrier = function(element, options) {
         var self = this;
-        this.uniqueID = new Date().getTime() + (Math.random(1) * 100);
-        this.$element = $(element);
         this.options = options;
         this.toDay = new Date();
+        this.uniqueID = this.toDay.getTime() + (Math.random(1) * 100);
+        this.$element = $(element);
+        this.$calendar = null;
+
         this.jour = 0;
-        this.mois = this.toDay.getMonth();
-        this.annee = this.toDay.getFullYear();
 
-        this.toBootstrap();
+        if (this.options.tobootstrap) this.bindCss(this.boostrapClasses);
 
-        this.loadEvents(function () {
-            self.generate();
-        });
-
+        if (this.options.src && this.options.srcType) {
+            $.ajax({
+                url: this.options.src,
+                dataType: this.options.srcType,
+                success: function(data) {
+                    self.events = data.reponse;
+                    self.generate();
+                    self.bindEvents();
+                },
+                error: function(error) {
+                    console.log(error)
+                },
+                always: function() {
+                    console.log("always");
+                }
+            });
+        } else if (this.options.events) {
+            this.events = this.options.events;
+            this.generate();
+            this.bindEvents();
+        }
     }
 
     Calendrier.DEFAULTS = {
-        "src": "data/json/reservations.json", // data
-        "srcType": "json", // dataType,
+        "tobootstrap": false,
         "date": new Date(),
         "mois": ["Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin", "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre"],
         "jours": ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"],
         'footer': {
             "pattern": "Nous sommes le <span class='date'></span>",
             "map": {
-                ".date": function ($date, calendrier) {
+                ".date": function($date, calendrier) {
                     var date = calendrier.toDay;
                     $date.text(date.getFullDateFormatted());
                 }
@@ -76,31 +91,27 @@
 
     Calendrier.prototype.triggers = {
         "precedent": {
-            "click": function (me, event, calendrier) {
+            "click": function(me, event, calendrier) {
                 console.log("click precedent");
-                var precedent = calendrier.options.date.getMonth() - 1;
-                calendrier.options.date.setMonth(precedent);
-                calendrier.generate();
+                calendrier.$element.trigger("calendrier.click.precedent");
             }
         },
         "suivant": {
-            "click": function (me, event, calendrier) {
+            "click": function(me, event, calendrier) {
                 console.log("click suivant");
-                var precedent = calendrier.options.date.getMonth() + 1;
-                calendrier.options.date.setMonth(precedent);
-                calendrier.generate();
+                calendrier.$element.trigger("calendrier.click.suivant");
             }
         },
         "event": {
-            "click": function (me, event, calendrier) {
+            "click": function(me, event, calendrier) {
                 console.log("click event");
-                $(me).popover('toggle');
+                calendrier.$element.trigger("calendrier.click.event", $(me).data("event"));
             }
         },
         "jour": {
-            "click": function (me, event, calendrier) {
+            "click": function(me, event, calendrier) {
                 console.log("click jour");
-                $('.ondayclick').modal('toggle');
+                calendrier.$element.trigger("calendrier.click.jour");
             }
         }
     }
@@ -119,11 +130,10 @@
         "jour": $("<div class='cell jour'>"),
         "event": $("<div class='cell event'>"),
         "invalide": $("<div class='cell invalide'>"),
-        "precedent": $("<div class='precedent'><i class='glyphicon glyphicon-chevron-left'></div>"),
-        "suivant": $("<div class='suivant'><i class='glyphicon glyphicon-chevron-right'></div>"),
+        "precedent": $("<div class='precedent'></div>"),
+        "suivant": $("<div class='suivant'></div>"),
         "cell": $("<td>")
     };
-
 
     Calendrier.prototype.boostrapClasses = {
         "calendrier": "table table-striped",
@@ -143,14 +153,32 @@
         "suivant": "col-md-1 pull-right"
     }
 
+    Calendrier.prototype.cssClasses = {
+        "calendrier": "",
+        "header": "",
+        "body": "",
+        "footer": "",
+        "semainier": "",
+        "libellejour": "",
+        "ligne": "",
+        "date": "",
+        "annee": "",
+        "mois": "",
+        "jour": "",
+        "event": "",
+        "invalide": "",
+        "precedent": "",
+        "suivant": ""
+    }
+
     Calendrier.prototype.utils = {
-        "dernierJour": function (date) {
+        "dernierJour": function(date) {
             return new Date(date.getFullYear(), date.getMonth() + 1, -1).getDate() + 1;
         },
-        "verifierDate": function (d, m, y) {
+        "verifierDate": function(d, m, y) {
             return m > 0 && m < 13 && y > 0 && y < 32768 && d > 0 && d <= (new Date(y, m, 0)).getDate();
         },
-        "quelJourEstCe": function (jour, mois, annee) {
+        "quelJourEstCe": function(jour, mois, annee) {
             var dateObj = new Date();
             dateObj.setDate(jour);
             dateObj.setMonth(mois);
@@ -158,7 +186,7 @@
             var numDay = dateObj.getDay();
             return numDay;
         },
-        "getDate": function (day, month, year) {
+        "getDate": function(day, month, year) {
             if (typeof day == 'string' && day.split("/")) {
                 var tab = day.split("/");
                 day = Number(tab[0]);
@@ -169,16 +197,23 @@
         }
     }
 
-    Calendrier.prototype.findElement = function (name) {
+    Calendrier.prototype.bindCss = function(css) {
+        var elements = this.elements;
+        $.each(css, function(i, o) {
+            elements[i].addClass(o);
+        });
+    }
+
+    Calendrier.prototype.findElement = function(name) {
         var selecteur = "." + this.elements[name].attr("class").split(' ').join('.');
         return this.$element.find(selecteur);
     }
 
-    Calendrier.prototype.bindEvents = function () {
+    Calendrier.prototype.bindEvents = function() {
         var self = this;
-        $.each(self.triggers, function (elName, eventList) {
+        $.each(self.triggers, function(elName, eventList) {
             var elements = self.findElement(elName);
-            $.each(eventList, function (eventName, event) {
+            $.each(eventList, function(eventName, event) {
                 elements.on(eventName + '.' + elName, $.proxy(function fire(evt) {
                     evt.stopPropagation();
                     evt.preventDefault();
@@ -186,24 +221,65 @@
                 }));
             });
         });
-    }
 
-    Calendrier.prototype.toBootstrap = function (calendrier) {
-        var elements = this.elements;
-        $.each(this.boostrapClasses, function (i, o) {
-            elements[i].addClass(o);
+        this.$element.on("calendrier.click.precedent", function(e) {
+            console.log("calendrier.click.precedent");
+            var precedent = self.options.date.getMonth() - 1;
+            self.options.date.setMonth(precedent);
+            self.changeBody();
+            self.changeDateHeader();
+        });
+
+        this.$element.on("calendrier.click.suivant", function(e) {
+            console.log("calendrier.click.suivant");
+            var precedent = self.options.date.getMonth() + 1;
+            self.options.date.setMonth(precedent);
+            self.changeBody();
+            self.changeDateHeader();
+        });
+
+        this.$element.on("calendrier.click.event", function(e, data) {
+            console.log("calendrier.click.event", data);
+
+        });
+
+        this.$element.on("calendrier.click.jour", function(e) {
+            console.log("calendrier.click.jour");
+
         });
     }
 
-    Calendrier.prototype.genererHeader = function (date) {
+    Calendrier.prototype.applyCss = function() {
+        var elements = this.elements,
+            isBootstrap = this.options.tobootstrap;
+
+        if (isBootstrap) {
+            $.each(this.boostrapClasses, function(i, o) {
+                elements[i].addClass(o);
+            });
+        }
+    }
+
+    Calendrier.prototype.changeBody = function() {
+        var newBody = this.genererBody();
+        this.findElement('body').replaceWith(newBody);
+    }
+
+    Calendrier.prototype.changeDateHeader = function() {
+        var mois = this.options.mois[this.options.date.getMonth()];
+        this.findElement("mois").text(mois);
+        this.findElement("annee").text(this.options.date.getFullYear());
+    }
+
+    Calendrier.prototype.genererHeader = function() {
         var $header = this.elements.header.clone(),
             $date = this.elements.date.clone(),
             $annee = this.elements.annee.clone(),
             $mois = this.elements.mois.clone(),
             $precedent = this.elements.precedent.clone(),
             $suivant = this.elements.suivant.clone(),
-            mois = this.options.mois[date.getMonth()],
-            annee = date.getFullYear();
+            mois = this.options.mois[this.options.date.getMonth()],
+            annee = this.options.date.getFullYear();
 
         $mois.text(mois);
         $annee.text(annee);
@@ -211,18 +287,27 @@
         $date.append($mois)
             .append($annee);
 
-        return $header
-            .prepend($precedent)
+        if (this.options.tobootstrap) {
+            $precedent.append("<i class='glyphicon glyphicon-chevron-left'>");
+            $suivant.append("<i class='glyphicon glyphicon-chevron-right'>");
+        } else {
+            $precedent.append("<span>precedent</span>");
+            $suivant.append("<span>suivant</span>");
+        }
+
+        $header.prepend($precedent)
             .append($date)
-            .append($suivant);
+            .append($suivant)
+
+        return $header;
     }
 
-    Calendrier.prototype.genererSemainier = function () {
+    Calendrier.prototype.genererSemainier = function() {
         var $semainier = this.elements.semainier.clone(),
             ligne = this.elements.ligne.clone(),
             libellejour = this.elements.libellejour;
 
-        $.each(this.options.jours, function (i, o) {
+        $.each(this.options.jours, function(i, o) {
             var jour = libellejour.clone();
             jour.text(o);
             ligne.append(jour);
@@ -231,7 +316,7 @@
         return $semainier.append(ligne);
     }
 
-    Calendrier.prototype.genererJour = function (isValid, date) {
+    Calendrier.prototype.genererJour = function(isValid) {
         var self = this,
             cell = this.elements.cell.clone(),
             $jour = this.elements.jour,
@@ -239,86 +324,86 @@
             $event = this.elements.event;
 
         var jour = null,
-            dateObj = null,
-            event = null;
+            event = null,
+            label = "",
+            events = this.events || [];
 
-        if (this.utils.verifierDate(date, this.mois, this.annee)) {
-            var tab = [date.toString(), this.mois.toString(), this.annee.toString()];
-            dateObj = new Date().fromFrString(tab.join('/'));
-            event = $.grep(this.events, function (objet) {
-                return dateObj.compareToFrString(objet.date);
+        if (this.utils.verifierDate(this.options.date.getDay(), this.options.date.getMonth(), this.options.date.getYear())) {
+            event = $.grep(events, function(objet) {
+                return self.options.date.compareToFrString(objet.date);
             });
         }
 
         if (event && event.length > 0) {
             event = event[0];
             jour = $event.clone();
-            jour.popover({
-                'title': event.titre,
-                'content': event.description,
-                'html': true,
-                'container': 'body',
-                'trigger': 'manual'
-            });
+            jour.data("event", event);
         } else if (isValid) {
             jour = $jour.clone();
         } else {
             jour = $invalide.clone();
         }
 
-        jour.data("date", dateObj);
-        jour.text(date);
+        if (isValid) {
+            label = self.jour;
+        }
+
+        jour.data("date", this.options.date);
+        jour.text(label);
         return cell.append(jour);
     }
 
-    Calendrier.prototype.genererSemaine = function (debut, fin) {
+    Calendrier.prototype.genererSemaine = function(debut, fin) {
         var self = this,
             semaine = this.elements.ligne.clone(),
             jour = null;
 
-        $.each(this.options.jours, function (i, o) {
+        $.each(this.options.jours, function(i, o) {
             var isValid = false,
                 date = "";
             if (i < debut || i > fin) {
                 isValid = false;
             } else {
-                date = ++self.jour;
+                self.jour++;
                 isValid = true;
             }
-            jour = self.genererJour(isValid, date);
+            jour = self.genererJour(isValid);
             semaine.append(jour);
         });
 
         return semaine;
     }
 
-    Calendrier.prototype.genererBody = function (date) {
+    Calendrier.prototype.genererBody = function() {
         var self = this,
             $body = this.elements.body.clone(),
             today = this.toDay,
-            annee = this.annee,
-            mois = this.mois;
+            date = this.options.date,
+            annee = date.getFullYear(),
+            mois = date.getMonth();
 
         var premierJour = this.utils.quelJourEstCe(1, mois, annee),
             dernierJour = this.utils.dernierJour(date),
             isCurrent = ((today.getMonth() == mois) && (today.getFullYear() == annee));
 
+        this.jour = 0;
+
         while (this.jour < dernierJour) {
             var debutDeSemaine = Math.max(0, ((premierJour + this.jour) % 7) - 1);
             var finDeSemaine = Math.min(6, (dernierJour - this.jour) - 1);
-            console.log("fin", finDeSemaine, dernierJour, this.jour);
             var semaine = this.genererSemaine(debutDeSemaine, finDeSemaine);
             if (isCurrent) {
-                semaine.find(".cell").filter(function () {
+                semaine.find(".cell").filter(function() {
                     return ($(this).text() == today.getDate());
                 }).addClass("today");
             }
             $body.append(semaine);
         }
+
         return $body;
     }
 
-    Calendrier.prototype.genererFooter = function () {
+    Calendrier.prototype.genererFooter = function() {
         var self = this,
             $footer = this.elements.footer.clone(),
             ligne = this.elements.ligne.clone(),
@@ -326,68 +411,29 @@
             innerfooter = this.options.footer.pattern,
             mapping = this.options.footer.map;
 
-        cell.html(innerfooter);
+        cell.html(innerfooter)
+            .attr("colspan", this.options.jours.length)
+            .appendTo(ligne)
+            .appendTo($footer);
 
-        cell.attr("colspan", this.options.jours.length);
-
-        ligne.append(cell);
-
-        $footer.append(ligne);
-
-        $.each(mapping, function (selecteur, fn) {
+        $.each(mapping, function(selecteur, fn) {
             fn($footer.find(selecteur), self);
         })
 
-        return $footer;
+        this.$calendar.append($footer);
     }
 
-    Calendrier.prototype.generate = function () {
-        var calendar = this.elements.calendrier.clone(),
-            date = this.options.date;
-
-        this.jour = 0;
-        this.mois = date.getMonth();
-        this.annee = date.getFullYear();
-
-        calendar.prepend(this.genererHeader(date))
-            .append(this.genererFooter())
-            .append(this.genererSemainier())
-            .append(this.genererBody(date));
-
-        this.$element.html(calendar);
-
-        this.bindEvents();
+    Calendrier.prototype.generate = function() {
+        this.$calendar = this.elements.calendrier.clone();
+        this.$calendar.append(this.genererHeader());
+        this.$calendar.append(this.genererSemainier());
+        this.$calendar.append(this.genererBody());
+        this.$calendar.append(this.genererFooter());
+        this.$element.html(this.$calendar);
     }
 
-    Calendrier.prototype.loadEvents = function (url, callback) {
-
-        if (typeof url == 'function') {
-            callback = url;
-            url = "";
-        }
-
-        var self = this,
-            provider = url || this.options.src,
-            type = this.options.srcType;
-
-        $.ajax({
-            url: provider,
-            dataType: type,
-            success: function (data) {
-                self.events = data.reponse;
-                if (callback) callback(data.reponse);
-            },
-            error: function (error) {
-                console.log(error)
-            },
-            always: function () {
-                console.log("always")
-            }
-        });
-    }
-
-    $.fn.calendrier = function (option) {
-        return this.each(function () {
+    $.fn.calendrier = function(option) {
+        return this.each(function() {
             var $this = $(this);
             var data = $this.data('marquion.calendar');
             var options = $.extend({}, Calendrier.DEFAULTS, $this.data(), typeof option == 'object' && option)
@@ -396,5 +442,12 @@
     }
 
     $.fn.calendrier.Constructor = Calendrier;
+
+    $(window).on('load', function() {
+        $('[data-ride="calendrier"]').each(function() {
+            var $calendrier = $(this)
+            $calendrier.calendrier($calendrier.data())
+        })
+    })
 
 })(jQuery);
