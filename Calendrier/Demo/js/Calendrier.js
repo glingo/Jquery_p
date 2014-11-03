@@ -57,7 +57,6 @@
                 success: function(data) {
                     self.events = data.reponse;
                     self.generate();
-                    self.bindEvents();
                 },
                 error: function(error) {
                     console.log(error)
@@ -69,7 +68,6 @@
         } else if (this.options.events) {
             this.events = this.options.events;
             this.generate();
-            this.bindEvents();
         }
     }
 
@@ -153,24 +151,6 @@
         "suivant": "col-md-1 pull-right"
     }
 
-    Calendrier.prototype.cssClasses = {
-        "calendrier": "",
-        "header": "",
-        "body": "",
-        "footer": "",
-        "semainier": "",
-        "libellejour": "",
-        "ligne": "",
-        "date": "",
-        "annee": "",
-        "mois": "",
-        "jour": "",
-        "event": "",
-        "invalide": "",
-        "precedent": "",
-        "suivant": ""
-    }
-
     Calendrier.prototype.utils = {
         "dernierJour": function(date) {
             return new Date(date.getFullYear(), date.getMonth() + 1, -1).getDate() + 1;
@@ -211,8 +191,10 @@
 
     Calendrier.prototype.bindEvents = function() {
         var self = this;
+
         $.each(self.triggers, function(elName, eventList) {
             var elements = self.findElement(elName);
+            
             $.each(eventList, function(eventName, event) {
                 elements.on(eventName + '.' + elName, $.proxy(function fire(evt) {
                     evt.stopPropagation();
@@ -220,6 +202,7 @@
                     event(this, evt, self);
                 }));
             });
+            
         });
 
         this.$element.on("calendrier.click.precedent", function(e) {
@@ -430,6 +413,7 @@
         this.$calendar.append(this.genererBody());
         this.$calendar.append(this.genererFooter());
         this.$element.html(this.$calendar);
+        this.bindEvents();
     }
 
     $.fn.calendrier = function(option) {
